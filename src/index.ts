@@ -17,20 +17,20 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
     throw new Error('BIRDEYE_API_KEY is not set');
   }
 
-  // Add cache API to cache birdeye responses
   const timeTo = req.query()['time_to'];
 
   if (!timeTo) {
     throw new Error('time_to is required');
   }
 
-  const timefrom = +timeTo - 86400; // 1 day ago
+  const flooredToMinTimeTo = Math.floor(+timeTo / 100) * 100;
+  const timefrom = flooredToMinTimeTo - 86400; // 1 day ago
 
   const params = new URLSearchParams({
     ...req.query(),
     address_type: 'token',
     time_from: timefrom.toString(),
-    time_to: timeTo,
+    time_to: flooredToMinTimeTo.toString(),
   });
 
   const url = `https://public-api.birdeye.so/defi/history_price?${params.toString()}`;
