@@ -1,0 +1,18 @@
+// Bun Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`proxy birdeye requests should work 1`] = `
+{
+  "27G8MtK7VtTcCHkpASjSDdkWWYfoqT6ggEuKidVJidD4": {
+    "priceChange24h": Any<Number>,
+    "updateHumanTime": Any<String>,
+    "updateUnixTime": Any<Number>,
+    "value": Any<Number>,
+  },
+  "So11111111111111111111111111111111111111112": {
+    "priceChange24h": Any<Number>,
+    "updateHumanTime": Any<String>,
+    "updateUnixTime": Any<Number>,
+    "value": Any<Number>,
+  },
+}
+`;
