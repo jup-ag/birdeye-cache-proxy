@@ -1,10 +1,46 @@
 import { Hono } from 'hono';
+import { BlankEnv, BlankSchema } from 'hono/types';
 
-const app = new Hono();
+const app = new Hono<
+  {
+    Bindings: {
+      BIRDEYE_API_KEY: string;
+    };
+  },
+  BlankSchema,
+  '/'
+>();
 
-app.get('/defi/*', (c) => {
+app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
+  const { BIRDEYE_API_KEY } = env;
+  if (!BIRDEYE_API_KEY) {
+    throw new Error('BIRDEYE_API_KEY is not set');
+  }
+
   // Add cache API to cache birdeye responses
-  return c.text('Hello Hono!');
+  let url = req.url.split(req.header('host') || '')[1];
+  url = `https://public-api.birdeye.so${url}`;
+
+  const request = new Request(url, {
+    headers: new Headers({
+      'X-API-KEY': BIRDEYE_API_KEY || '',
+    }),
+  });
+
+  let cache = caches.default;
+  const cached = await cache.match(request);
+
+  if (cached) {
+    console.log('cached');
+    return cached;
+  } else {
+    const resp = await fetch(request);
+
+    // save cache
+    executionCtx.waitUntil(cache.put(request, resp.clone()));
+
+    return resp;
+  }
 });
 
 export default app;
