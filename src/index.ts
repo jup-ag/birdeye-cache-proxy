@@ -1,6 +1,8 @@
 import { Hono } from 'hono';
 import { BlankEnv, BlankSchema } from 'hono/types';
 
+const DEFAULT_TTL_IN_SECONDS = 60;
+
 const app = new Hono<
   {
     Bindings: {
@@ -49,11 +51,13 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
     return cached;
   } else {
     const resp = await fetch(request);
+    const modifiedResp = new Response(resp.body, resp);
+    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
 
     // save cache
-    executionCtx.waitUntil(cache.put(request, resp.clone()));
+    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
 
-    return resp;
+    return modifiedResp;
   }
 });
 
@@ -82,11 +86,13 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
     return cached;
   } else {
     const resp = await fetch(request);
+    const modifiedResp = new Response(resp.body, resp);
+    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
 
     // save cache
-    executionCtx.waitUntil(cache.put(request, resp.clone()));
+    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
 
-    return resp;
+    return modifiedResp;
   }
 });
 
