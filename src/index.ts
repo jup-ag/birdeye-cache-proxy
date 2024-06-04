@@ -24,6 +24,18 @@ app.all(
   }),
 );
 
+const callAPI = async (request: Request, cache: Cache, executionCtx: ExecutionContext) => {
+  const resp = await fetch(request);
+  if (resp.status === 200) {
+    const modifiedResp = new Response(resp.body, resp);
+    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
+
+    // save cache
+    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
+    return modifiedResp;
+  }
+};
+
 app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
   const { BIRDEYE_API_KEY } = env;
   if (!BIRDEYE_API_KEY) {
@@ -57,18 +69,21 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
   let cache = caches.default;
   const cached = await cache.match(request);
 
+  let count = 0;
+  const maxTries = 3;
+
   if (cached) {
     console.log('cached');
     return new Response(cached.body);
   } else {
-    const resp = await fetch(request);
-    const modifiedResp = new Response(resp.body, resp);
-    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
-
-    // save cache
-    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
-
-    return modifiedResp;
+    try {
+      return await callAPI(request, cache, executionCtx);
+    } catch (e) {
+      count++;
+      if (count < maxTries) {
+        return await callAPI(request, cache, executionCtx);
+      }
+    }
   }
 });
 
@@ -92,18 +107,21 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
   let cache = caches.default;
   const cached = await cache.match(request);
 
+  let count = 0;
+  const maxTries = 3;
+
   if (cached) {
     console.log('cached');
     return new Response(cached.body);
   } else {
-    const resp = await fetch(request);
-    const modifiedResp = new Response(resp.body, resp);
-    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
-
-    // save cache
-    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
-
-    return modifiedResp;
+    try {
+      return await callAPI(request, cache, executionCtx);
+    } catch (e) {
+      count++;
+      if (count < maxTries) {
+        return await callAPI(request, cache, executionCtx);
+      }
+    }
   }
 });
 
