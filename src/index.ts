@@ -1,5 +1,8 @@
 import { Hono } from 'hono';
 import { BlankEnv, BlankSchema } from 'hono/types';
+import { cors } from 'hono/cors';
+
+const DEFAULT_TTL_IN_SECONDS = 60;
 
 const app = new Hono<
   {
@@ -10,6 +13,16 @@ const app = new Hono<
   BlankSchema,
   '/'
 >();
+
+app.all(
+  '*',
+  cors({
+    allowHeaders: ['*'],
+    origin: '*',
+    maxAge: 7200,
+    allowMethods: ['GET', 'POST'],
+  }),
+);
 
 app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
   const { BIRDEYE_API_KEY } = env;
@@ -46,14 +59,16 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
 
   if (cached) {
     console.log('cached');
-    return cached;
+    return new Response(cached.body);
   } else {
     const resp = await fetch(request);
+    const modifiedResp = new Response(resp.body, resp);
+    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
 
     // save cache
-    executionCtx.waitUntil(cache.put(request, resp.clone()));
+    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
 
-    return resp;
+    return modifiedResp;
   }
 });
 
@@ -79,14 +94,16 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
 
   if (cached) {
     console.log('cached');
-    return cached;
+    return new Response(cached.body);
   } else {
     const resp = await fetch(request);
+    const modifiedResp = new Response(resp.body, resp);
+    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
 
     // save cache
-    executionCtx.waitUntil(cache.put(request, resp.clone()));
+    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
 
-    return resp;
+    return modifiedResp;
   }
 });
 
