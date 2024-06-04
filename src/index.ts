@@ -82,6 +82,8 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
       count++;
       if (count < maxTries) {
         return await callAPI(request, cache, executionCtx);
+      } else {
+        return new Response('Failed to fetch');
       }
     }
   }
@@ -120,6 +122,8 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
       count++;
       if (count < maxTries) {
         return await callAPI(request, cache, executionCtx);
+      } else {
+        return new Response('Failed to fetch');
       }
     }
   }
