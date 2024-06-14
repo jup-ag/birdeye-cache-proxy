@@ -77,7 +77,7 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
 
   const timeTo = req.query()['time_to'];
   const timeAgo = req.query()['time_ago'];
-  const roundEpoch = req.query()['round_epoch'];
+  const roundOffEpoch = req.query()['round_off_epoch'];
 
   if (!timeTo) {
     throw new Error('time_to is required');
@@ -87,11 +87,11 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
     throw new Error('time_ago is required or invalid');
   }
 
-  if (!roundEpoch) {
+  if (!roundOffEpoch) {
     throw new Error('round_epoch is required');
   }
 
-  const roundedTimeTo = Math.floor(+timeTo / +roundEpoch) * +roundEpoch;
+  const roundedTimeTo = Math.floor(+timeTo / +roundOffEpoch) * +roundOffEpoch;
   const timefrom = computeTimeAgo(roundedTimeTo, timeAgo as TIME_FROM_AGO);
 
   const params = new URLSearchParams({
@@ -102,10 +102,11 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
 
   // clean up params
   params.delete('time_ago');
-  params.delete('round_epoch');
+  params.delete('round_off_epoch');
 
   const url = `https://public-api.birdeye.so${req.path}?${params.toString()}`;
 
+  console.log({ url });
   const request = new Request(url, {
     headers: new Headers({
       'X-API-KEY': BIRDEYE_API_KEY || '',
