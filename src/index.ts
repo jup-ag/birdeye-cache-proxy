@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
-import { BlankEnv, BlankSchema } from 'hono/types';
+import { BlankSchema } from 'hono/types';
 import { cors } from 'hono/cors';
-
-const DEFAULT_TTL_IN_SECONDS = 60;
+import { callAPI } from './utils';
 
 const app = new Hono<
   {
@@ -23,18 +22,6 @@ app.all(
     allowMethods: ['GET', 'POST'],
   }),
 );
-
-const callAPI = async (request: Request, cache: Cache, executionCtx: ExecutionContext) => {
-  const resp = await fetch(request);
-  if (resp.status === 200) {
-    const modifiedResp = new Response(resp.body, resp);
-    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
-
-    // save cache
-    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
-    return modifiedResp;
-  }
-};
 
 app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
   const { BIRDEYE_API_KEY } = env;
@@ -69,22 +56,14 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
   let cache = caches.default;
   const cached = await cache.match(request);
 
-  let count = 0;
-  const maxTries = 3;
-
   if (cached) {
     console.log('cached');
     return new Response(cached.body);
   } else {
     try {
       return await callAPI(request, cache, executionCtx);
-    } catch (e) {
-      count++;
-      if (count < maxTries) {
-        return await callAPI(request, cache, executionCtx);
-      } else {
-        return new Response('Failed to fetch');
-      }
+    } catch (error) {
+      console.log({ error });
     }
   }
 });
@@ -109,22 +88,14 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
   let cache = caches.default;
   const cached = await cache.match(request);
 
-  let count = 0;
-  const maxTries = 3;
-
   if (cached) {
     console.log('cached');
     return new Response(cached.body);
   } else {
     try {
       return await callAPI(request, cache, executionCtx);
-    } catch (e) {
-      count++;
-      if (count < maxTries) {
-        return await callAPI(request, cache, executionCtx);
-      } else {
-        return new Response('Failed to fetch');
-      }
+    } catch (error) {
+      console.log({ error });
     }
   }
 });
