@@ -1,8 +1,7 @@
 import { Hono } from 'hono';
-import { BlankEnv, BlankSchema } from 'hono/types';
+import { BlankSchema } from 'hono/types';
 import { cors } from 'hono/cors';
-
-const DEFAULT_TTL_IN_SECONDS = 60;
+import { callAPI } from './utils';
 
 const app = new Hono<
   {
@@ -61,14 +60,11 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
     console.log('cached');
     return new Response(cached.body);
   } else {
-    const resp = await fetch(request);
-    const modifiedResp = new Response(resp.body, resp);
-    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
-
-    // save cache
-    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
-
-    return modifiedResp;
+    try {
+      return await callAPI(request, cache, executionCtx);
+    } catch (error) {
+      console.log({ error });
+    }
   }
 });
 
@@ -96,14 +92,11 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
     console.log('cached');
     return new Response(cached.body);
   } else {
-    const resp = await fetch(request);
-    const modifiedResp = new Response(resp.body, resp);
-    modifiedResp.headers.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
-
-    // save cache
-    executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
-
-    return modifiedResp;
+    try {
+      return await callAPI(request, cache, executionCtx);
+    } catch (error) {
+      console.log({ error });
+    }
   }
 });
 
