@@ -75,27 +75,29 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
     throw new Error('BIRDEYE_API_KEY is not set');
   }
 
-  const timeTo = req.query()['time_to'];
-  const timeAgo = req.query()['time_ago'];
-  const roundOffEpoch = req.query()['round_off_epoch'];
+  const query = req.query();
+  const { time_to: timeTo, time_ago: timeAgo, round_off_epoch: roundOffEpoch, time_from } = query;
 
   if (!timeTo) {
     throw new Error('time_to is required');
   }
 
-  if (!timeAgo || !(timeAgo in TIME_FROM_AGO)) {
-    throw new Error('time_ago is required or invalid');
-  }
+  // we do time_from to be backward compatible
+  if (!time_from) {
+    if (!timeAgo || !(timeAgo in TIME_FROM_AGO)) {
+      throw new Error('time_ago is required or invalid');
+    }
 
-  if (!roundOffEpoch) {
-    throw new Error('round_epoch is required');
+    if (!roundOffEpoch) {
+      throw new Error('round_epoch is required');
+    }
   }
 
   const roundedTimeTo = Math.floor(+timeTo / +roundOffEpoch) * +roundOffEpoch;
-  const timefrom = computeTimeAgo(roundedTimeTo, timeAgo as TIME_FROM_AGO);
+  const timefrom = time_from || computeTimeAgo(roundedTimeTo, timeAgo as TIME_FROM_AGO);
 
   const params = new URLSearchParams({
-    ...req.query(),
+    ...query,
     time_from: timefrom.toString(),
     time_to: roundedTimeTo.toString(),
   });
