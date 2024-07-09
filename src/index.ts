@@ -1,7 +1,8 @@
 import { Hono } from 'hono';
 import { BlankSchema } from 'hono/types';
 import { cors } from 'hono/cors';
-import { callAPI } from './utils';
+import { callAPI, computeTimeAgo } from './utils';
+import { TIME_FROM_AGO } from './constants';
 
 const app = new Hono<
   {
@@ -47,6 +48,67 @@ app.get('/defi/history_price', async ({ env, req, text, executionCtx }) => {
 
   const url = `https://public-api.birdeye.so/defi/history_price?${params.toString()}`;
 
+  const request = new Request(url, {
+    headers: new Headers({
+      'X-API-KEY': BIRDEYE_API_KEY || '',
+    }),
+  });
+
+  let cache = caches.default;
+  const cached = await cache.match(request);
+
+  if (cached) {
+    console.log('cached');
+    return new Response(cached.body);
+  } else {
+    try {
+      return await callAPI(request, cache, executionCtx);
+    } catch (error) {
+      console.log({ error });
+    }
+  }
+});
+
+app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
+  const { BIRDEYE_API_KEY } = env;
+  if (!BIRDEYE_API_KEY) {
+    throw new Error('BIRDEYE_API_KEY is not set');
+  }
+
+  const query = req.query();
+  const { time_to: timeTo, time_ago: timeAgo, round_off_epoch: roundOffEpoch, time_from } = query;
+
+  if (!timeTo) {
+    throw new Error('time_to is required');
+  }
+
+  // we do time_from to be backward compatible
+  if (!time_from) {
+    if (!timeAgo || !(timeAgo in TIME_FROM_AGO)) {
+      throw new Error('time_ago is required or invalid');
+    }
+
+    if (!roundOffEpoch) {
+      throw new Error('round_epoch is required');
+    }
+  }
+
+  const roundedTimeTo = Math.floor(+timeTo / +roundOffEpoch) * +roundOffEpoch;
+  const timefrom = time_from || computeTimeAgo(roundedTimeTo, timeAgo as TIME_FROM_AGO);
+
+  const params = new URLSearchParams({
+    ...query,
+    time_from: timefrom.toString(),
+    time_to: roundedTimeTo.toString(),
+  });
+
+  // clean up params
+  params.delete('time_ago');
+  params.delete('round_off_epoch');
+
+  const url = `https://public-api.birdeye.so${req.path}?${params.toString()}`;
+
+  console.log({ url });
   const request = new Request(url, {
     headers: new Headers({
       'X-API-KEY': BIRDEYE_API_KEY || '',
