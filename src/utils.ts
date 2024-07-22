@@ -1,6 +1,6 @@
 import { TIME_FROM_AGO } from './constants';
 
-const DEFAULT_TTL_IN_SECONDS = 60;
+const DEFAULT_TTL_IN_SECONDS = 30;
 
 export const callAPI = async (request: Request, cache: Cache, executionCtx: ExecutionContext) => {
   const resp = await fetch(request);

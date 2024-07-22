@@ -108,7 +108,6 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
 
   const url = `https://public-api.birdeye.so${req.path}?${params.toString()}`;
 
-  console.log({ url });
   const request = new Request(url, {
     headers: new Headers({
       'X-API-KEY': BIRDEYE_API_KEY || '',
