@@ -2,7 +2,7 @@ import { Hono } from 'hono';
 import { BlankSchema } from 'hono/types';
 import { cors } from 'hono/cors';
 import { callAPI, computeTimeAgo } from './utils';
-import { TIME_FROM_AGO } from './constants';
+import { allowedOrigins, TIME_FROM_AGO } from './constants';
 
 const app = new Hono<
   {
@@ -18,9 +18,10 @@ app.all(
   '*',
   cors({
     allowHeaders: ['*'],
-    origin: '*',
+    origin: allowedOrigins,
+    credentials: true,
     maxAge: 7200,
-    allowMethods: ['GET', 'POST'],
+    allowMethods: ['GET', 'POST', 'OPTIONS'],
   }),
 );
 
