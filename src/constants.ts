@@ -6,3 +6,5 @@ export enum TIME_FROM_AGO {
   ONE_WEEK = 'ONE_WEEK',
   ONE_YEAR = 'ONE_YEAR',
 }
+
+export const allowedOrigins = ['https://*.jup.ag', 'https://*.meteora.ag', '*wowcats.vercel.app'];
