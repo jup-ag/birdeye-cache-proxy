@@ -6,20 +6,22 @@ export const callAPI = async (request: Request, cache: Cache, executionCtx: Exec
   const resp = await fetch(request);
 
   if (resp.status === 200) {
-    const newHeaders = new Headers(resp.headers);
-    newHeaders.set('Cache-Control', `public, max-age=${DEFAULT_TTL_IN_SECONDS}`);
-
     const modifiedResp = new Response(resp.body, {
       status: resp.status,
       statusText: resp.statusText,
-      headers: newHeaders,
+      headers: {
+        'Cache-Control': `public, max-age=${DEFAULT_TTL_IN_SECONDS}`,
+      },
     });
 
     // save cache
     executionCtx.waitUntil(cache.put(request, modifiedResp.clone()));
     return modifiedResp;
   } else {
-    return resp;
+    return new Response(resp.body, {
+      headers: resp.headers,
+      status: resp.status
+    })
   }
 };
 

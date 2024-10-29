@@ -8,6 +8,7 @@ const app = new Hono<
   {
     Bindings: {
       BIRDEYE_API_KEY: string;
+      CODEX_API_KEY: string;
     };
   },
   BlankSchema,
@@ -155,6 +156,86 @@ app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
   } else {
     try {
       return await callAPI(request, cache, executionCtx);
+    } catch (error) {
+      console.log({ error });
+    }
+  }
+});
+
+app.get('/codex/getTokenPrices', async ({ env, req, executionCtx }) => {
+  const { CODEX_API_KEY } = env;
+  if (!CODEX_API_KEY) {
+    throw new Error('CODEX_API_KEY is not set');
+  }
+
+  const listAddress = req.query('list_address')?.split(',');
+  if (listAddress?.length === 0)
+    return new Response(JSON.stringify({ message: 'No address detected' }), { status: 400 });
+  if (listAddress?.length && listAddress?.length > 25)
+    return new Response(JSON.stringify({ message: 'Up to 25 addresses supported per request' }), { status: 400 });
+
+  // solana networkId is 1399811149
+  const request = new Request('https://graph.defined.fi/graphql', {
+    method: 'POST',
+    headers: new Headers({
+      'Content-Type': 'application/json',
+      Authorization: CODEX_API_KEY,
+      Origin: req.header('origin') || '',
+    }),
+    body: JSON.stringify({
+      query: `{
+        getTokenPrices(inputs: [
+          ${listAddress?.map((addr) => `{ address:"${addr}" networkId:1399811149 }`)}
+        ]) {
+          priceUsd
+          timestamp
+        }
+      }`,
+    }),
+  });
+
+  let cache = caches.default;
+  // Purposely patch request to GET so caching can work
+  const userRequest = new Request(req.url);
+  const cached = await cache.match(userRequest);
+  const cachedJson = cached
+    ? ((await cached.json()) as {
+        data: {
+          getTokenPrices: Array<{
+            priceUsd: number;
+            timestamp: number;
+          }>;
+        };
+      })
+    : null;
+
+  const cacheExpired = cachedJson ? Date.now() / 1000 - cachedJson.data.getTokenPrices[0].timestamp > 30 : false;
+
+  if (cached && !cacheExpired) {
+    console.log(`HIT: ${req.url}`);
+    return new Response(JSON.stringify(cachedJson), { headers: cached.headers });
+  } else {
+    try {
+      const resp = await fetch(request);
+
+      if (resp.status === 200) {
+        const modifiedResp = new Response(resp.body, {
+          status: resp.status,
+          statusText: resp.statusText,
+          headers: {
+            'Cache-Control': `public, max-age=30`,
+          },
+        });
+
+        // save cache
+        executionCtx.waitUntil(cache.put(userRequest, modifiedResp.clone()));
+        return modifiedResp;
+      } else {
+        return new Response(resp.body, {
+          headers: resp.headers,
+          status: resp.status,
+        });
+      }
     } catch (error) {
       console.log({ error });
     }
