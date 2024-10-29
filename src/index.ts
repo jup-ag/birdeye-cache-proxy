@@ -180,7 +180,7 @@ app.get('/codex/getTokenPrices', async ({ env, req, executionCtx }) => {
     headers: new Headers({
       'Content-Type': 'application/json',
       Authorization: CODEX_API_KEY,
-      Origin: req.header('origin') || '',
+      Origin: 'https://jup.ag', // TODO: It's a pain to support origin as of the moment due to whitelisting, let's fix tomorrow
     }),
     body: JSON.stringify({
       query: `{
