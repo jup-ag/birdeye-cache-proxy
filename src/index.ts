@@ -95,7 +95,8 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
   }
 
   const roundedTimeTo = Math.floor(+timeTo / +roundOffEpoch) * +roundOffEpoch;
-  const timefrom = time_from || computeTimeAgo(roundedTimeTo, timeAgo as TIME_FROM_AGO);
+  // TODO: confirm how round off works, currently purposely rounding it off 10 seconds
+  const timefrom = Math.floor(+time_from / 10) * 10 || computeTimeAgo(roundedTimeTo, timeAgo as TIME_FROM_AGO);
 
   const params = new URLSearchParams({
     ...query,
