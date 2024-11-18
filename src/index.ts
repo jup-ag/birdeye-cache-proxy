@@ -130,6 +130,51 @@ app.get('/defi/ohlcv/*', async ({ env, req, text, executionCtx }) => {
   }
 });
 
+app.get('/defi/multi_price', async ({ env, req, text, executionCtx }) => {
+  const { BIRDEYE_API_KEY } = env;
+  if (!BIRDEYE_API_KEY) {
+    throw new Error('BIRDEYE_API_KEY is not set');
+  }
+
+  const listAddress = req.query('list_address');
+  if (!listAddress) {
+    throw new Error('list_address is required');
+  }
+
+  const addresses = listAddress.split(',');
+  const results: Record<string, any> = {};
+  const cache = caches.default;
+
+  for (const address of addresses) {
+    const url = `https://public-api.birdeye.so/defi/multi_price?list_address=${address}`;
+    const request = new Request(url, {
+      headers: new Headers({
+        'X-API-KEY': BIRDEYE_API_KEY,
+      }),
+    });
+
+    const cached = await cache.match(request);
+
+    if (cached) {
+      const cachedData = (await cached.json()) as { data?: Record<string, any> };
+      results[address] = cachedData.data?.[address] || null;
+    } else {
+      try {
+        const response = await callAPI(request, cache, executionCtx);
+        const data = (await response.json()) as { data?: Record<string, any> };
+        results[address] = data.data?.[address] || null;
+      } catch (error) {
+        console.error(`Error fetching data for address ${address}:`, error);
+        results[address] = null;
+      }
+    }
+  }
+
+  return new Response(JSON.stringify({ success: true, data: results }), {
+    headers: { 'Content-Type': 'application/json' },
+  });
+});
+
 app.get('/defi/*', async ({ env, req, text, executionCtx }) => {
   const { BIRDEYE_API_KEY } = env;
   if (!BIRDEYE_API_KEY) {
