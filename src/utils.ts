@@ -69,6 +69,7 @@ export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
     properties: {
       address,
       token,
+      endpoint: c.req.path,
       distinct_id: Date.now(),
       $insert_id: Math.random().toString(36)
     },
