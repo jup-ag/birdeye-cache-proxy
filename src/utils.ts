@@ -1,5 +1,5 @@
-import { TIME_FROM_AGO } from './constants';
 import { Context } from 'hono';
+import { TIME_FROM_AGO } from './constants';
 
 const DEFAULT_TTL_IN_SECONDS = 30;
 
@@ -59,8 +59,8 @@ export const getAddressKeys = (query: Record<string, string>): string[] => {
   return addressKeys;
 };
 
-
-
+// Mp doesnt worrk well with cloudflare worker, so sending HTTPS request instead
+// https://developer.mixpanel.com/reference/track-event
 export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
   const token = c.env.MIXPANEL_TOKEN;
 
@@ -74,8 +74,6 @@ export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
     },
     event: 'birdeye-proxy'
   }]);
-
-
 
   try {
     fetch('https://api.mixpanel.com/track', {
