@@ -1,4 +1,5 @@
 import { TIME_FROM_AGO } from './constants';
+import { Context } from 'hono';
 
 const DEFAULT_TTL_IN_SECONDS = 30;
 
@@ -43,4 +44,51 @@ export const computeTimeAgo = (time: number, timeAgo: TIME_FROM_AGO) => {
   }
 
   return time - secondsToSubtract;
+};
+
+export const getAddressKeys = (query: Record<string, string>): string[] => {
+  const addressKeys: string[] = [];
+
+  Object.entries(query).forEach(([key, value]) => {
+    // We have params with different names, but has the word address in it
+    if (key.toLowerCase().includes('address')) {
+      addressKeys.push(value);
+    }
+  });
+
+  return addressKeys;
+};
+
+
+
+export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
+  const token = c.env.MIXPANEL_TOKEN;
+
+  const address = getAddressKeys(c.req.query());
+  const properties = JSON.stringify([   {
+    properties: {
+      address,
+      token: 'e57f50a6a30b33c9418a0872c56cb1d8',
+      distinct_id: Date.now(),
+      $insert_id: Math.random().toString(36)
+    },
+    event: 'birdeye-proxy'
+  }]);
+
+
+
+  try {
+    fetch('https://api.mixpanel.com/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${token}`,
+      },
+      body: properties
+    });
+  } catch (error) {
+    console.error('Failed to track analytics:', error);
+  } finally {
+    await next();
+  }
 };
