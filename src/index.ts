@@ -1,18 +1,21 @@
 import { Hono } from 'hono';
 import { BlankSchema } from 'hono/types';
 import { cors } from 'hono/cors';
-import { callAPI, computeTimeAgo } from './utils';
+import { callAPI, computeTimeAgo, trackAnalytics } from './utils';
 import { TIME_FROM_AGO } from './constants';
 
 const app = new Hono<
   {
     Bindings: {
       BIRDEYE_API_KEY: string;
+      MIXPANEL_TOKEN: string;
     };
   },
   BlankSchema,
   '/'
 >();
+
+app.use('*', trackAnalytics);
 
 app.all(
   '*',

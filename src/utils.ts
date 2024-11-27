@@ -1,3 +1,4 @@
+import { Context } from 'hono';
 import { TIME_FROM_AGO } from './constants';
 
 const DEFAULT_TTL_IN_SECONDS = 30;
@@ -43,4 +44,49 @@ export const computeTimeAgo = (time: number, timeAgo: TIME_FROM_AGO) => {
   }
 
   return time - secondsToSubtract;
+};
+
+export const getAddressKeys = (query: Record<string, string>): string[] => {
+  const addressKeys: string[] = [];
+
+  Object.entries(query).forEach(([key, value]) => {
+    // We have params with different names, but has the word address in it
+    if (key.toLowerCase().includes('address')) {
+      addressKeys.push(value);
+    }
+  });
+
+  return addressKeys;
+};
+
+// Mp doesnt worrk well with cloudflare worker, so sending HTTPS request instead
+// https://developer.mixpanel.com/reference/track-event
+export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
+  const token = c.env.MIXPANEL_TOKEN;
+
+  const address = getAddressKeys(c.req.query());
+  const properties = JSON.stringify([   {
+    properties: {
+      address,
+      token,
+      endpoint: c.req.path,
+      distinct_id: Date.now(),
+      $insert_id: Math.random().toString(36)
+    },
+    event: 'birdeye-proxy'
+  }]);
+
+  try {
+    fetch('https://api.mixpanel.com/track', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: properties
+    });
+  } catch (error) {
+    console.error('Failed to track analytics:', error);
+  } finally {
+    await next();
+  }
 };
