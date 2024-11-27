@@ -68,7 +68,7 @@ export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
   const properties = JSON.stringify([   {
     properties: {
       address,
-      token: 'e57f50a6a30b33c9418a0872c56cb1d8',
+      token,
       distinct_id: Date.now(),
       $insert_id: Math.random().toString(36)
     },
@@ -80,7 +80,6 @@ export const trackAnalytics = async (c: Context, next: () => Promise<void>) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${token}`,
       },
       body: properties
     });
